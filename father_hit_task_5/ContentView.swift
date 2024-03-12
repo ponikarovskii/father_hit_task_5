@@ -7,14 +7,45 @@
 
 import SwiftUI
 
+struct Diff {
+    var blackDiff: CGFloat = 0.0
+    var whiteDiff: CGFloat = 0.0
+}
+
 struct ContentView: View {
     @State private var offset = CGSize.zero
     @State private var position = CGSize.zero
     @State private var blackDiff = 0.0
     @State private var whiteDiff = 0.0
     private var squareSize = 100.0
-    @State private var bottomPoint = CGFloat.zero
-    @State private var topPoint = CGFloat.zero
+    @State var diff: Diff = Diff()
+    
+    
+    func countOffset(positioniHeight: CGFloat, offsetHeight: CGFloat, geometryHeight: CGFloat) -> Diff {
+        var diff: Diff = Diff()
+        var topPoint: CGFloat = positioniHeight + offsetHeight - 50.0
+        var bottomPoint: CGFloat = positioniHeight + offsetHeight + 50.0
+        
+        if (bottomPoint > geometryHeight/4 && topPoint <= geometryHeight/4) {
+            diff.blackDiff = -(bottomPoint - geometryHeight/4)
+            diff.whiteDiff = 100.0 + (geometryHeight/4 - (bottomPoint))
+        } else if (bottomPoint >= -geometryHeight/4 && topPoint < -geometryHeight/4) {
+            diff.blackDiff = -(bottomPoint + geometryHeight/4)
+            diff.whiteDiff = -geometryHeight/4 - (topPoint)
+        } else if (bottomPoint >= 0 && topPoint <= 0) {
+            diff.blackDiff = 100 - bottomPoint
+            diff.whiteDiff = -(bottomPoint)
+        } else if (topPoint > geometryHeight/4 || (bottomPoint < 0 && topPoint > -geometryHeight/4)) {
+            diff.blackDiff = 100.0
+            diff.whiteDiff = 0.0
+        }
+        else {
+            diff.blackDiff = 0.0
+            diff.whiteDiff = 100.0
+        }
+        
+        return diff
+    }
     
     var body: some View {
         GeometryReader { geometry in
@@ -38,40 +69,19 @@ struct ContentView: View {
                     RoundedRectangle(cornerRadius: 20)
                         .fill(.black)
                         .frame(width: /*@START_MENU_TOKEN@*/100/*@END_MENU_TOKEN@*/, height: 100)
-                        .clipShape(Rectangle().offset(y: blackDiff))
+                        .clipShape(Rectangle().offset(y: diff.blackDiff))
                     
                     RoundedRectangle(cornerRadius: 20)
                         .fill(.white)
                         .frame(width: /*@START_MENU_TOKEN@*/100/*@END_MENU_TOKEN@*/, height: 100)
-                        .clipShape(Rectangle().offset(y: whiteDiff))
+                        .clipShape(Rectangle().offset(y: diff.whiteDiff))
                 }
                 .offset(x: position.width + offset.width, y: position.height + offset.height)
                 .gesture(
                     DragGesture()
                         .onChanged { gesture in
                             offset = gesture.translation
-                            if (position.height + offset.height + 50 > geometry.size.height/4 && position.height + offset.height - 50 <= geometry.size.height/4) {
-                                blackDiff = -(position.height + offset.height + 50 - geometry.size.height/4)
-                                whiteDiff = 100.0 + (geometry.size.height/4 - (position.height + offset.height + 50.0))
-                                print(1)
-                            } else if (position.height + offset.height + 50 >= -geometry.size.height/4 && position.height + offset.height - 50 < -geometry.size.height/4) {
-                                blackDiff = -(position.height + offset.height + 50 + geometry.size.height/4)
-                                whiteDiff = -geometry.size.height/4 - (position.height + offset.height - 50.0)
-                                print(3)
-                            } else if (position.height + offset.height + 50 >= 0 && position.height + offset.height - 50 <= 0) {
-                                blackDiff = 50 - (position.height + offset.height)
-                                whiteDiff = -(position.height + offset.height + 50.0)
-                                print(2)
-                            } else if (position.height + offset.height - 50 > geometry.size.height/4 || (position.height + offset.height + 50 < 0 && position.height + offset.height - 50 > -geometry.size.height/4)) {
-                                blackDiff = 100.0
-                                whiteDiff = 0.0
-                                print(5)
-                            }
-                            else {
-                                blackDiff = 0.0
-                                whiteDiff = 100.0
-                                print(4)
-                            }
+                            diff = countOffset(positioniHeight: position.height, offsetHeight: offset.height, geometryHeight: geometry.size.height)
                         }
                         .onEnded { _ in
                             position.width += offset.width
@@ -80,6 +90,9 @@ struct ContentView: View {
                         }
                 )
                 
+            }
+            .onAppear() {
+                diff = countOffset(positioniHeight: position.height, offsetHeight: offset.height, geometryHeight: geometry.size.height)
             }
         }
         .frame(maxWidth: /*@START_MENU_TOKEN@*/.infinity/*@END_MENU_TOKEN@*/, maxHeight: .infinity)
